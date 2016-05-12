@@ -7,8 +7,8 @@
 <body>
     <script src="./peterRequire.js"></script>
     <script>
-        require(['testModule'], function() {
-
+        PR.require('./testModule', function(testModule) {
+            console.log(testModule);
         });
     </script>
 </body>
