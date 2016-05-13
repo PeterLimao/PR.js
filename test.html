@@ -5,10 +5,13 @@
     <title>test</title>
 </head>
 <body>
-    <script src="./peterRequire.js"></script>
+    <script src="./PR.js"></script>
     <script>
         PR.require('./testModule', function(testModule) {
             console.log(testModule);
+        });
+
+        PR.require('./testModule', function(testModule) {
         });
     </script>
 </body>

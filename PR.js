@@ -10,14 +10,12 @@
 
     //事件状态
     var EVENT = {
-        LOAD: 'load',
         COMPLETE: 'complete',
         ERROR: 'error'
     };
 
     //模块状态跟事件的映射，配置什么样的状态触发什么事件
     var eventStatusMapping = {};
-    eventStatusMapping[STATUS.LOADING] = EVENT.LOAD;
     eventStatusMapping[STATUS.LOADED] = EVENT.COMPLETE;
     eventStatusMapping[STATUS.ERROR] = EVENT.ERROR;
 
@@ -47,7 +45,8 @@
         //TODO other browsers
     };
 
-    var isType = function(obj, type) {
+    //类型判断
+    var _isType = function(obj, type) {
         return Object.prototype.toString.call(obj) === '[Object ' + type + ']';
     };
 
@@ -60,63 +59,39 @@
     var require = function(ids, callback) {
         var _self = this;
         var idsCount = 0;
-        var exports = [];
-        if (!isType(ids, 'Array')) {
+        var _exports = [];
+        if (!_isType(ids, 'Array')) {
             ids = [ids];
         }
 
         for (var i = 0; i < ids.length; i++) {
             idsCount++;
-            loadModule(ids[i], function(_export) {
+            _loadModule(ids[i], function(_export) {
                 idsCount--;
-                exports[i] = _export;
+                _exports[i] = _export;
                 if (idsCount === 0) {
-                    callback.apply(_self, exports);
+                    callback.apply(_self, _exports);
                 }
             });
         }
     };
 
-    var define = function() {
-        var argsLength = arguments.length;
-        switch(argsLength) {
-            case 1:
-                if (typeof arguments[0] === 'function') {
-
-                }
-                if (typeof arguments[0] === 'object') {
-
-                }
-                if (typeof arguments[0] === 'string') {
-
-                }
-            break;
-            case 3:
-            break;
-            default:
-                throw Error('you should use right params!');
-            break;
-        }
+    var define = function(id, deps, factory) {
     };
 
-    var _defineForString = function() {};
-    var _defineForFunc = function() {};
-    var _defineForObj = function() {};
-
-    var loadModule = function(id, callback) {
+    var _loadModule = function(id, callback) {
+        //判断是否存在模块缓存
         var mod = moduleCache[id] || Module.getModule(id);
+
         mod.on(EVENT.COMPLETE, function(_export) {
+            moduleCache[id].status = STATUS.LOADED;
             callback(_export);
         });
 
-        mod.on(EVENT.LOAD, function() {
-            console.log('Module ' + id + ' is start load');
-        });
-
         mod.on(EVENT.ERROR, function(message) {
-            console.error(message);
+            moduleCache[id].status = STATUS.ERROR;
+            throw new Error(message);
         });
-        mod.load();
     };
 
     var moduleCache = {};
@@ -128,6 +103,7 @@
         this.deps = null;
         this.factory = null;
         this.callbacks = {};
+        this.load();
     };
 
     Module.getModule = function(id) {
@@ -143,9 +119,6 @@
 
     Module.prototype.trigger = function(event, message) {
         var _self = this;
-        if (!this.callbacks[event]) {
-            throw new Error('This ' + event + ' is not listen!');
-        }
         each(this.callbacks[event], function(i, callback) {
             callback.call(_self, message);
         });
@@ -154,16 +127,20 @@
     Module.prototype.load = function() {
         var _self = this;
         var id = _self.id;
+        //开始加载，并把mod扔进moduleCache
+        _self.status = STATUS.LOADING;
+        moduleCache[id] = _self;
+        //加载script
         var script = document.createElement('script');
         script.id = id;
         script.async = true;
         script.src = getScriptUrl(id);
         document.head.appendChild(script);
-        _self.setStatus(STATUS.LOADING);
 
         script.onerror = function() {
             _self.setStatus(STATUS.ERROR, 'module ' + id + 'is not exist');
         };
+
         script.onload = function() {
             _self.setStatus(STATUS.LOADED);
         };
@@ -179,5 +156,7 @@
     PR.require = require;
     PR.define = define;
     PR.setConfig = setConfig;
+    //TODO debug
+    window.cache = moduleCache;
     window.PR = PR;
 })(window);
