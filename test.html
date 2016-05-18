@@ -7,11 +7,8 @@
 <body>
     <script src="./PR.js"></script>
     <script>
-        PR.require('./testModule', function(testModule) {
-            console.log(testModule);
-        });
-
-        PR.require('./testModule', function(testModule) {
+        PR.require('testModule', function(testModule) {
+            console.log(testModule.names);
         });
     </script>
 </body>

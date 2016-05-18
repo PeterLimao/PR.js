@@ -21,7 +21,7 @@
 
     //默认配置
     var _config = {
-        baseUrl: ''
+        baseUrl: './'
     };
 
     //设置配置
@@ -56,6 +56,7 @@
         }
     };
 
+    //加载模块
     var require = function(ids, callback) {
         var _self = this;
         var idsCount = 0;
@@ -68,15 +69,39 @@
             idsCount++;
             _loadModule(ids[i], function(_export) {
                 idsCount--;
-                _exports[i] = _export;
+                _exports.push(_export);
                 if (idsCount === 0) {
-                    callback.apply(_self, _exports);
+                    callback.apply(this, _exports);
                 }
             });
         }
     };
 
+    //定义模块
     var define = function(id, deps, factory) {
+        var mod = moduleCache[id],
+            _self = this,
+            _exports = [],
+            depsCount = 0,
+            depsLength = deps.length;
+        mod.factory = factory;
+
+        if (deps.length) {
+            for (var i = 0; i < depsLength; i++) {
+                depsCount++;
+                _loadModule(deps[i], function(_export) {
+                    depsCount--;
+                    _exports.push(_export);
+                    if (depsCount === 0) {
+                        mod.exports = mod.factory.apply(mod, _exports);
+                        mod.setStatus(STATUS.LOADED, mod.exports);
+                    }
+                });
+            }
+        } else {
+            mod.exports = mod.factory();
+            mod.setStatus(STATUS.LOADED, mod.exports);
+        }
     };
 
     var _loadModule = function(id, callback) {
@@ -101,6 +126,7 @@
         this.id = id;
         this.status = STATUS.UNLOAD
         this.deps = null;
+        this.exports = {};
         this.factory = null;
         this.callbacks = {};
         this.load();
@@ -117,10 +143,10 @@
         this.callbacks[event].push(callback);
     };
 
-    Module.prototype.trigger = function(event, message) {
+    Module.prototype.trigger = function(event, action) {
         var _self = this;
         each(this.callbacks[event], function(i, callback) {
-            callback.call(_self, message);
+            callback.call(_self, action);
         });
     };
 
@@ -140,23 +166,17 @@
         script.onerror = function() {
             _self.setStatus(STATUS.ERROR, 'module ' + id + 'is not exist');
         };
-
-        script.onload = function() {
-            _self.setStatus(STATUS.LOADED);
-        };
     };
 
-    Module.prototype.setStatus = function(status, message) {
+    Module.prototype.setStatus = function(status, action) {
         if (this.status === status) {
             return;
         }
-        this.trigger(eventStatusMapping[status], message);
+        this.trigger(eventStatusMapping[status], action);
     }
 
     PR.require = require;
     PR.define = define;
     PR.setConfig = setConfig;
-    //TODO debug
-    window.cache = moduleCache;
     window.PR = PR;
 })(window);
