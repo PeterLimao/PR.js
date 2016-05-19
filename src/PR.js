@@ -21,7 +21,7 @@
 
     //默认配置
     var _config = {
-        baseUrl: './'
+        baseUrl: '../test/'
     };
 
     //设置配置
